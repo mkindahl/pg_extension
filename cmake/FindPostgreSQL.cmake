@@ -1,0 +1,172 @@
+# Copyright 2020 Mats Kindahl
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#.rst:
+# FindPostgreSQL
+# --------------
+#
+# Find the PostgreSQL installation.
+#
+# This module defines
+#
+# ::
+#
+#   PostgreSQL_INCLUDE_DIRS - include directories
+#   PostgreSQL_SERVER_INCLUDE_DIRS - include directories for server programming
+#   PostgreSQL_LIBRARY_DIRS  - link directories for PostgreSQL libraries
+#   PostgreSQL_EXTENSION_DIR  - the directory for extensions
+#   PostgreSQL_SHARED_LINK_OPTIONS  - options for shared libraries
+#   PostgreSQL_LINK_OPTIONS  - options for static libraries and executables
+#   PostgreSQL_VERSION_STRING - the version of PostgreSQL found (since CMake 2.8.8)
+#
+# ----------------------------------------------------------------------------
+# History:
+# This module is derived from the existing FindPostgreSQL.cmake and
+# try to use most of the existing output variables of that module, but
+# uses `pg_config` to extract the necessary information instead and
+# add a macro for creating extensions.
+
+# Define additional search paths for root directories.
+set(PostgreSQL_ROOT_DIRECTORIES
+  ENV PGROOT
+  ENV PGPATH
+  ${PostgreSQL_ROOT})
+
+find_program(PG_CONFIG pg_config
+  HINT ${PostgreSQL_ROOT_DIRECTORIES}
+  PATH_SUFFIXES bin)
+
+if(NOT PG_CONFIG)
+  message(FATAL_ERROR "Could not find pg_config")
+endif()
+
+message(STATUS "Found pg_config as ${PG_CONFIG}")
+
+macro(PG_CONFIG VAR OPT)
+  execute_process(COMMAND ${PG_CONFIG} ${OPT}
+    OUTPUT_VARIABLE ${VAR}
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+endmacro()
+
+pg_config(_pg_includedir --includedir)
+pg_config(_pg_pkgincludedir --pkgincludedir)
+pg_config(_pg_sharedir --sharedir)
+pg_config(_pg_includedir_server --includedir-server)
+pg_config(_pg_libs --libs)
+pg_config(_pg_ldflags --ldflags)
+pg_config(_pg_ldflags_sl --ldflags_sl)
+pg_config(_pg_ldflags_ex --ldflags_ex)
+pg_config(_pg_pkglibdir --pkglibdir)
+pg_config(_pg_libdir --libdir)
+pg_config(_pg_version --version)
+
+separate_arguments(_pg_ldflags)
+separate_arguments(_pg_ldflags_sl)
+separate_arguments(_pg_ldflags_ex)
+
+set(_server_lib_dirs ${_pg_libdir} ${_pg_pkglibdir})
+set(_server_inc_dirs ${_pg_pkgincludedir} ${_pg_includedir_server})
+string(REPLACE ";" " " _shared_link_options "${_pg_ldflags};${_pg_ldflags_sl}")
+
+set(PostgreSQL_INCLUDE_DIRS "${_pg_includedir}" CACHE PATH
+  "Top-level directory containing the PostgreSQL include directories.")
+set(PostgreSQL_EXTENSION_DIR "${_pg_sharedir}/extension" CACHE PATH
+  "Directory containing extension SQL and control files")
+set(PostgreSQL_SERVER_INCLUDE_DIRS "${_server_inc_dirs}" CACHE PATH
+  "PostgreSQL include directories for server include files.")
+set(PostgreSQL_LIBRARY_DIRS "${_pg_libdir}" CACHE PATH
+  "library directory for PostgreSQL")
+set(PostgreSQL_SHARED_LINK_OPTIONS "${_shared_link_options}" CACHE STRING
+  "PostgreSQL linker options for shared libraries.")
+set(PostgreSQL_LINK_OPTIONS "${_pg_ldflags},${_pg_ldflags_ex}" CACHE STRING
+  "PostgreSQL linker options for executables.")
+set(PostgreSQL_SERVER_LIBRARY_DIRS "${_server_lib_dirs}" CACHE PATH
+  "PostgreSQL server library directories.")
+set(PostgreSQL_VERSION_STRING "${_pg_version}" CACHE STRING
+  "PostgreSQL version string")
+set(PostgreSQL_PACKAGE_LIBRARY_DIR "${_pg_pkglibdir}" CACHE STRING
+  "PostgreSQL package library directory")
+set(PostgreSQL_FOUND TRUE)
+
+message(STATUS "PostgreSQL package library directory: ${PostgreSQL_PACKAGE_LIBRARY_DIR}")
+message(STATUS "PostgreSQL extension directory: ${PostgreSQL_EXTENSION_DIR}")
+
+# add_postgresql_extension(NAME ...)
+#
+# VERSION:
+#    Mandatory version of the extension. Is used when generating the
+#    control file.
+# ENCODING:
+#    Optional encoding for the control file.
+# COMMENT:
+#    Optional comemnt for the control file.
+# SOURCES:
+#    List of source files to compile.
+# SCRIPTS:
+#    Script files.
+# SCRIPT_TEMPLATES:
+#    Template script files.
+function(add_postgresql_extension NAME)
+  set(_optional)
+  set(_single VERSION COMMENT ENCODING)
+  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES)
+  cmake_parse_arguments(_ext "${_optional}" "${_single}" "${_multi}" ${ARGN})
+
+  if(NOT _ext_VERSION)
+    message(FATAL_ERROR "Extension version not set")
+  endif()
+
+  # Here we are assuming that there is at least one source file, which
+  # is strictly speaking not necessary for an extension. If we do not
+  # have source files, we need to create a custom target and attach
+  # properties to that. We expect the user to be able to add target
+  # properties after creating the extension.
+  add_library(${NAME} MODULE ${_ext_SOURCES})
+
+  set(_link_flags "${PostgreSQL_SHARED_LINK_OPTIONS}")
+  foreach(_dir ${PostgreSQL_SERVER_LIBRARY_DIRS})
+    set(_link_flags "${_link_flags} -L${_dir}")
+  endforeach()
+
+  # Collect and build script files to install
+  set(_script_files ${_ext_SCRIPTS})
+  foreach(_template ${_ext_SCRIPT_TEMPLATES})
+    string(REGEX REPLACE "\.in$" "" _script ${_template})
+    configure_file(${_template} ${_script} @ONLY)
+    list(APPEND _script_files ${CMAKE_CURRENT_BINARY_DIR}/${_script})
+    message(STATUS "Building script file ${_script} from template file ${_template}")
+  endforeach()
+
+  set_target_properties(${NAME} PROPERTIES
+    PREFIX ""
+    LINK_FLAGS "${_link_flags}")
+
+  target_include_directories(${NAME}
+    PRIVATE ${PostgreSQL_SERVER_INCLUDE_DIRS}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+  # Generate control file at build time. We do not know the target
+  # file name until then.
+  set(_control_file "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.control")
+  file(GENERATE OUTPUT ${_control_file}
+    CONTENT "
+default_version = '${_ext_VERSION}'
+module_pathname = '$libdir/$<TARGET_FILE_NAME:${NAME}>'
+")
+
+  install(TARGETS ${NAME} LIBRARY
+    DESTINATION ${PostgreSQL_PACKAGE_LIBRARY_DIR})
+  install(FILES ${_control_file} ${_script_files}
+    DESTINATION ${PostgreSQL_EXTENSION_DIR})
+endfunction()

@@ -1,2 +1,14 @@
-# pg_extension
-Template project for building PostgreSQL extensions
+# CMake-based PostgreSQL Extensions
+
+Template project for building CMake-based PostgreSQL extensions.
+
+The project is the base for creating PostgreSQL extensions using CMake
+rather than the supported PGXS scripts. The macros distributed with
+this project use `pg_config` to figure out what settings are
+necessary.
+
+If you want to use a different installation than the default, you can
+set `PGPATH` to point to the prefix where you have installed
+PostgreSQL. For example, `/usr/local` if you have a local installation
+that used this prefix, or as in my case, when I have several versions
+installed in parallel, `/usr/local/pgsql/11.7`.
