@@ -12,13 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.1)
-project(extension)
+add_subdirectory(quaternion)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
-
-find_package(PostgreSQL REQUIRED)
-
-set(CMAKE_CXX_STANDARD 14)
-
-add_subdirectory(src)

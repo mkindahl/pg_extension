@@ -12,3 +12,15 @@ set `PGPATH` to point to the prefix where you have installed
 PostgreSQL. For example, `/usr/local` if you have a local installation
 that used this prefix, or as in my case, when I have several versions
 installed in parallel, `/usr/local/pgsql/11.7`.
+
+The repository contains a few basic examples right now that are
+C-like, but the intension is to create a basis for writing extensions
+in C++ with a focus on modern C++ (which right now means C++14 and
+later).
+
+* `quaternion`: An extension demonstrating the introduction of user
+  defined types. It implements support for
+  [*quaternions*][quaternions-wiki] that can be used to describe
+  spatial rotation.
+
+[quaternions-wiki]: https://en.wikipedia.org/wiki/Quaternion
