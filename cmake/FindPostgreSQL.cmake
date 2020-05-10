@@ -112,15 +112,17 @@ message(STATUS "PostgreSQL extension directory: ${PostgreSQL_EXTENSION_DIR}")
 # COMMENT:
 #    Optional comemnt for the control file.
 # SOURCES:
-#    List of source files to compile.
+#    List of source files to compile for the extension.
+# REQUIRES:
+#    List of extensions that are required by this extension.
 # SCRIPTS:
 #    Script files.
 # SCRIPT_TEMPLATES:
 #    Template script files.
 function(add_postgresql_extension NAME)
   set(_optional)
-  set(_single VERSION COMMENT ENCODING)
-  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES)
+  set(_single VERSION ENCODING)
+  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES REQUIRES)
   cmake_parse_arguments(_ext "${_optional}" "${_single}" "${_multi}" ${ARGN})
 
   if(NOT _ext_VERSION)
@@ -156,13 +158,30 @@ function(add_postgresql_extension NAME)
     PRIVATE ${PostgreSQL_SERVER_INCLUDE_DIRS}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-  # Generate control file at build time. We do not know the target
-  # file name until then.
+  # Generate control file at build time (which is when GENERATE
+  # evaluate the contents). We do not know the target file name until
+  # then.
   set(_control_file "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.control")
   file(GENERATE OUTPUT ${_control_file}
-    CONTENT "
+    CONTENT "# This file is generated content from add_postgresql_extension.
+# No point in modifying it, it will be overwritten anyway.
+
+# Default version, always set
 default_version = '${_ext_VERSION}'
+
+# Module pathname generated from target shared library name. Use
+# MODULE_PATHNAME in script file.
 module_pathname = '$libdir/$<TARGET_FILE_NAME:${NAME}>'
+
+# Comment for extension. Set using COMMENT option. Can be set in
+script file as well.
+$<$<NOT:$<BOOL:${_ext_COMMENT}>>:#>comment = '${_ext_COMMENT}'
+
+# Encoding for script file. Set using ENCODING option.
+$<$<NOT:$<BOOL:${_ext_ENCODING}>>:#>encoding = '${_ext_ENCODING}'
+
+# Required extensions. Set using REQUIRES option (multi-valued).
+$<$<NOT:$<BOOL:${_ext_REQUIRES}>>:#>requires = '$<JOIN:${_ext_REQUIRES},$<COMMA> >'
 ")
 
   install(TARGETS ${NAME} LIBRARY
