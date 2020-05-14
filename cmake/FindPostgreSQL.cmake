@@ -97,6 +97,13 @@ set(PostgreSQL_VERSION_STRING "${_pg_version}" CACHE STRING
   "PostgreSQL version string")
 set(PostgreSQL_PACKAGE_LIBRARY_DIR "${_pg_pkglibdir}" CACHE STRING
   "PostgreSQL package library directory")
+
+find_program(PG_REGRESS pg_regress
+  HINT ${PostgreSQL_PACKAGE_LIBRARY_DIR}/pgxs/src/test/regress)
+if(NOT PG_REGRESS)
+  message(FATAL_ERROR "Could not find pg_regress")
+endif()
+
 set(PostgreSQL_FOUND TRUE)
 
 message(STATUS "PostgreSQL package library directory: ${PostgreSQL_PACKAGE_LIBRARY_DIR}")
@@ -122,7 +129,7 @@ message(STATUS "PostgreSQL extension directory: ${PostgreSQL_EXTENSION_DIR}")
 function(add_postgresql_extension NAME)
   set(_optional)
   set(_single VERSION ENCODING)
-  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES REQUIRES)
+  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES REQUIRES TESTS)
   cmake_parse_arguments(_ext "${_optional}" "${_single}" "${_multi}" ${ARGN})
 
   if(NOT _ext_VERSION)
@@ -188,4 +195,32 @@ $<$<NOT:$<BOOL:${_ext_REQUIRES}>>:#>requires = '$<JOIN:${_ext_REQUIRES},$<COMMA>
     DESTINATION ${PostgreSQL_PACKAGE_LIBRARY_DIR})
   install(FILES ${_control_file} ${_script_files}
     DESTINATION ${PostgreSQL_EXTENSION_DIR})
+
+  if(_ext_TESTS)
+    foreach(_test ${_ext_TESTS})
+      set(_sql_file "${CMAKE_CURRENT_SOURCE_DIR}/sql/${_test}.sql")
+      set(_out_file "${CMAKE_CURRENT_SOURCE_DIR}/expected/${_test}.out")
+      if(NOT EXISTS "${_sql_file}")
+	message(FATAL_ERROR "Test file '${_sql_file}' does not exist!")
+      endif()
+      if(NOT EXISTS "${_out_file}")
+	file(WRITE "${_out_file}")
+	message(STATUS "Created empty file ${_out_file}")
+      endif()
+    endforeach()
+  
+    add_test(NAME ${NAME}
+      COMMAND ${PG_REGRESS} --inputdir=${CMAKE_CURRENT_SOURCE_DIR} --outputdir=${CMAKE_CURRENT_BINARY_DIR} --load-extension=${NAME} ${_ext_TESTS})
+
+    add_custom_target(${NAME}_update_results
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/results/*.out ${CMAKE_CURRENT_SOURCE_DIR}/expected)
+  endif()
 endfunction()
+
+# We add a custom target to get output when there is a failure.
+add_custom_target(test_verbose
+  COMMAND ${CMAKE_CTEST_COMMAND}
+     --force-new-ctest-process
+     --verbose
+     --output-on-failure
+)
