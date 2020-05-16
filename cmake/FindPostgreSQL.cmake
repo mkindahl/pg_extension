@@ -181,7 +181,7 @@ default_version = '${_ext_VERSION}'
 module_pathname = '$libdir/$<TARGET_FILE_NAME:${NAME}>'
 
 # Comment for extension. Set using COMMENT option. Can be set in
-script file as well.
+# script file as well.
 $<$<NOT:$<BOOL:${_ext_COMMENT}>>:#>comment = '${_ext_COMMENT}'
 
 # Encoding for script file. Set using ENCODING option.
