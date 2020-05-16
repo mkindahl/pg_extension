@@ -210,7 +210,7 @@ $<$<NOT:$<BOOL:${_ext_REQUIRES}>>:#>requires = '$<JOIN:${_ext_REQUIRES},$<COMMA>
     endforeach()
   
     add_test(NAME ${NAME}
-      COMMAND ${PG_REGRESS} --inputdir=${CMAKE_CURRENT_SOURCE_DIR} --outputdir=${CMAKE_CURRENT_BINARY_DIR} --load-extension=${NAME} ${_ext_TESTS})
+      COMMAND ${PG_REGRESS} --temp-instance=${CMAKE_BINARY_DIR}/tmp_check --inputdir=${CMAKE_CURRENT_SOURCE_DIR} --outputdir=${CMAKE_CURRENT_BINARY_DIR} --load-extension=${NAME} ${_ext_TESTS})
 
     add_custom_target(${NAME}_update_results
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/results/*.out ${CMAKE_CURRENT_SOURCE_DIR}/expected)
