@@ -3,6 +3,9 @@ name: Debug Build on Ubuntu 18.04
 on:
   pull_request:
     branches: [ master ]
+    paths-ignore:
+      - '**.md'
+      - LICENSE
 
 jobs:
   build-ubuntu-18_04:
@@ -11,12 +14,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install PostgreSQL
-      run: sudo apt-get install postgresql-10 postgresql-server-dev-10
-    - name: Configure CMake
+      run: sudo apt-get install cmake postgresql postgresql-server-dev-all
+    - name: CMake configure
       run: cmake . -DCMAKE_BUILD_TYPE=Debug
-    - name: Build
+    - name: Build extensions
       run: make
-    - name: Install applications
+    - name: Install extensions
       run: sudo make install
     - name: Run CTest
       run: ctest --verbose --output-on-failure .
