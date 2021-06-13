@@ -18,7 +18,7 @@
 #
 # Find the PostgreSQL installation.
 #
-# This module defines
+# This module defines the following variables
 #
 # ::
 #
@@ -31,11 +31,12 @@
 #   PostgreSQL_VERSION_STRING - the version of PostgreSQL found (since CMake 2.8.8)
 #
 # ----------------------------------------------------------------------------
-# History:
-# This module is derived from the existing FindPostgreSQL.cmake and
-# try to use most of the existing output variables of that module, but
-# uses `pg_config` to extract the necessary information instead and
-# add a macro for creating extensions.
+# History: This module is derived from the existing
+# FindPostgreSQL.cmake and try to use most of the existing output
+# variables of that module, but uses `pg_config` to extract the
+# necessary information instead and add a macro for creating
+# extensions. The use of `pg_config` is aligned with how the PGXS code
+# distributed with PostgreSQL itself works.
 
 # Define additional search paths for root directories.
 set(PostgreSQL_ROOT_DIRECTORIES
@@ -44,7 +45,7 @@ set(PostgreSQL_ROOT_DIRECTORIES
   ${PostgreSQL_ROOT})
 
 find_program(PG_CONFIG pg_config
-  HINT ${PostgreSQL_ROOT_DIRECTORIES}
+  PATHS ${PostgreSQL_ROOT_DIRECTORIES}
   PATH_SUFFIXES bin)
 
 if(NOT PG_CONFIG)
@@ -106,30 +107,40 @@ endif()
 
 set(PostgreSQL_FOUND TRUE)
 
+message(STATUS "PostgreSQL version ${PostgreSQL_VERSION_STRING} found")
 message(STATUS "PostgreSQL package library directory: ${PostgreSQL_PACKAGE_LIBRARY_DIR}")
 message(STATUS "PostgreSQL extension directory: ${PostgreSQL_EXTENSION_DIR}")
 
 # add_postgresql_extension(NAME ...)
 #
-# VERSION:
-#    Mandatory version of the extension. Is used when generating the
-#    control file.
-# ENCODING:
-#    Optional encoding for the control file.
-# COMMENT:
-#    Optional comemnt for the control file.
-# SOURCES:
+# VERSION
+#    Version of the extension. Is used when generating the control
+#    file. Required.
+#
+# ENCODING
+#    Encoding for the control file. Optional.
+#
+# COMMENT
+#    Comment for the control file. Optional.
+#
+# SOURCES
 #    List of source files to compile for the extension.
-# REQUIRES:
+#
+# REQUIRES
 #    List of extensions that are required by this extension.
-# SCRIPTS:
+#
+# SCRIPTS
 #    Script files.
-# SCRIPT_TEMPLATES:
+#
+# SCRIPT_TEMPLATES
 #    Template script files.
+#
+# REGRESS
+#    Regress tests.
 function(add_postgresql_extension NAME)
   set(_optional)
   set(_single VERSION ENCODING)
-  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES REQUIRES TESTS)
+  set(_multi SOURCES SCRIPTS SCRIPT_TEMPLATES REQUIRES REGRESS)
   cmake_parse_arguments(_ext "${_optional}" "${_single}" "${_multi}" ${ARGN})
 
   if(NOT _ext_VERSION)
@@ -196,8 +207,8 @@ $<$<NOT:$<BOOL:${_ext_REQUIRES}>>:#>requires = '$<JOIN:${_ext_REQUIRES},$<COMMA>
   install(FILES ${_control_file} ${_script_files}
     DESTINATION ${PostgreSQL_EXTENSION_DIR})
 
-  if(_ext_TESTS)
-    foreach(_test ${_ext_TESTS})
+  if(_ext_REGRESS)
+    foreach(_test ${_ext_REGRESS})
       set(_sql_file "${CMAKE_CURRENT_SOURCE_DIR}/sql/${_test}.sql")
       set(_out_file "${CMAKE_CURRENT_SOURCE_DIR}/expected/${_test}.out")
       if(NOT EXISTS "${_sql_file}")
@@ -208,9 +219,9 @@ $<$<NOT:$<BOOL:${_ext_REQUIRES}>>:#>requires = '$<JOIN:${_ext_REQUIRES},$<COMMA>
 	message(STATUS "Created empty file ${_out_file}")
       endif()
     endforeach()
-  
+
     add_test(NAME ${NAME}
-      COMMAND ${PG_REGRESS} --temp-instance=${CMAKE_BINARY_DIR}/tmp_check --inputdir=${CMAKE_CURRENT_SOURCE_DIR} --outputdir=${CMAKE_CURRENT_BINARY_DIR} --load-extension=${NAME} ${_ext_TESTS})
+      COMMAND ${PG_REGRESS} --temp-instance=${CMAKE_BINARY_DIR}/tmp_check --inputdir=${CMAKE_CURRENT_SOURCE_DIR} --outputdir=${CMAKE_CURRENT_BINARY_DIR} --load-extension=${NAME} ${_ext_REGRESS})
 
     add_custom_target(${NAME}_update_results
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/results/*.out ${CMAKE_CURRENT_SOURCE_DIR}/expected)

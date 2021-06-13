@@ -16,5 +16,5 @@ add_postgresql_extension(quaternion
   VERSION 1.0
   SOURCES quaternion.c
   SCRIPTS quaternion--1.0.sql
-  TESTS basic)
+  REGRESS basic)
 
