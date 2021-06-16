@@ -19,16 +19,15 @@
  * https://www.postgresql.org/docs/10/xtypes.html
  */
 
-/* clang-format off */
-#include <postgres.h>
-#include <fmgr.h>
-/* clang-format on */
-
 #include "quaternion.h"
 
-#include <string.h>
+#include <postgres.h>
+#include <fmgr.h>
+
 #include <lib/stringinfo.h>
 #include <libpq/pqformat.h>
+
+#include <string.h>
 
 PG_MODULE_MAGIC;
 
