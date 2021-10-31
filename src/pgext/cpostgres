@@ -1,0 +1,11 @@
+// -*- Mode: C++ -*-
+
+#ifndef PGEXT_CPOSTGRES_
+#define PGEXT_CPOSTGRES_
+
+extern "C" {
+#include <postgres.h>
+#include <fmgr.h>
+}
+
+#endif  // PGEXT_CPOSTGRES_

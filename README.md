@@ -117,4 +117,7 @@ later).
   [*quaternions*][quaternions-wiki] that can be used to describe
   spatial rotation.
 
+* [`pgext`](src/pgext/README.md): A C++ library for writing extensions
+  to PostgreSQL.
+
 [quaternions-wiki]: https://en.wikipedia.org/wiki/Quaternion

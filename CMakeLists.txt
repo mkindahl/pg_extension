@@ -18,6 +18,15 @@ project(extension)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 find_package(PostgreSQL REQUIRED)
+find_package(GTest)
+
+include_directories(${PostgreSQL_INCLUDE_DIRS}
+                    ${PostgreSQL_SERVER_INCLUDE_DIRS} src)
+
+if(GTEST_FOUND)
+  include_directories(${GTEST_INCLUDE_DIRS})
+  enable_testing()
+endif()
 
 set(CMAKE_CXX_STANDARD 14)
 
