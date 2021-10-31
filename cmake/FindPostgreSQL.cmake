@@ -76,6 +76,10 @@ separate_arguments(_pg_ldflags_ex)
 set(_server_lib_dirs ${_pg_libdir} ${_pg_pkglibdir})
 set(_server_inc_dirs ${_pg_pkgincludedir} ${_pg_includedir_server})
 string(REPLACE ";" " " _shared_link_options "${_pg_ldflags};${_pg_ldflags_sl}")
+set(_link_options ${_pg_ldflags})
+if(_pg_ldflags_ex)
+  list(APPEND _link_options ${_pg_ldflags_ex})
+endif()
 
 set(PostgreSQL_INCLUDE_DIRS
     "${_pg_includedir}"
@@ -90,6 +94,9 @@ set(PostgreSQL_SERVER_INCLUDE_DIRS
 set(PostgreSQL_LIBRARY_DIRS
     "${_pg_libdir}"
     CACHE PATH "library directory for PostgreSQL")
+set(PostgreSQL_LIBRARIES
+    "${_pg_libs}"
+    CACHE PATH "Libraries for PostgreSQL")
 set(PostgreSQL_SHARED_LINK_OPTIONS
     "${_shared_link_options}"
     CACHE STRING "PostgreSQL linker options for shared libraries.")
@@ -118,7 +125,11 @@ message(STATUS "PostgreSQL version ${PostgreSQL_VERSION_STRING} found")
 message(
   STATUS
     "PostgreSQL package library directory: ${PostgreSQL_PACKAGE_LIBRARY_DIR}")
+message(STATUS "PostgreSQL libraries: ${PostgreSQL_LIBRARIES}")
 message(STATUS "PostgreSQL extension directory: ${PostgreSQL_EXTENSION_DIR}")
+message(STATUS "PostgreSQL linker options: ${PostgreSQL_LINK_OPTIONS}")
+message(
+  STATUS "PostgreSQL shared linker options: ${PostgreSQL_SHARED_LINK_OPTIONS}")
 
 # add_postgresql_extension(NAME ...)
 #
@@ -170,8 +181,11 @@ function(add_postgresql_extension NAME)
       STATUS "Building script file ${_script} from template file ${_template}")
   endforeach()
 
-  set_target_properties(${NAME} PROPERTIES PREFIX "" LINK_FLAGS
-                                                     "${_link_flags}")
+  set_target_properties(
+    ${NAME}
+    PROPERTIES PREFIX ""
+               LINK_FLAGS "${_link_flags}"
+               POSITION_INDEPENDENT_CODE ON)
 
   target_include_directories(
     ${NAME}
