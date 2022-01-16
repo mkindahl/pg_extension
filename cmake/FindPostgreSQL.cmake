@@ -50,6 +50,17 @@ endif()
 
 message(STATUS "Found pg_config as ${PG_CONFIG}")
 
+find_program(
+    PG_BINARY postgres
+    PATHS ${PostgreSQL_ROOT_DIRECTORIES}
+    PATH_SUFFIXES bin)
+
+if(NOT PG_BINARY)
+  message(FATAL_ERROR "Could not find postgres binary")
+endif()
+
+message(STATUS "Found postgres binary at ${PG_BINARY}")
+
 macro(PG_CONFIG VAR OPT)
   execute_process(
     COMMAND ${PG_CONFIG} ${OPT}
@@ -180,6 +191,10 @@ function(add_postgresql_extension NAME)
     message(
       STATUS "Building script file ${_script} from template file ${_template}")
   endforeach()
+
+  if (APPLE)
+    set(_link_flags "${_link_flags} -bundle_loader ${PG_BINARY}")
+  endif ()
 
   set_target_properties(
     ${NAME}
