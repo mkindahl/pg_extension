@@ -25,3 +25,12 @@
 # Editor files
 *~
 #*#
+
+
+# Files and directories for indexers and other tools
+.cache/
+compile_commands.json
+
+# CMake build directories
+build*/
+

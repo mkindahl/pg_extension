@@ -36,11 +36,9 @@ To build the extensions for installation using the default prefix
 (`/usr/local`) and keep the build files separate from the source
 files:
 
-```
-mkdir build
-cd build
-cmake ..
-cmake --build ..
+```bash
+cmake -S . -B build
+cmake --build build
 ```
 
 If you want to use a different installation prefix than the default,
@@ -49,19 +47,19 @@ PostgreSQL. For example, `/usr/local` if you have a local installation
 that used this prefix, or as in my case, when I have several versions
 installed in parallel, I could use `/usr/local/pgsql/11.7` like this:
 
-```
-mkdir build
-cd build
-cmake .. -DPGPATH=/usr/local/pgsql/11.7
+```bash
+cmake -S . -B build -DPGPATH=/usr/local/pgsql/16.2
 cmake --build ..
 ```
 
 ## Creating Extensions
 
-The macro `add_postgresql_extension` can be used to create extensions:
+The macro `add_postgresql_extension` can be used to create
+extensions. Here is a minimal top-level `CMakeLists.txt` file that
+creates a single extension.
 
 ```
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 project(my_package)
 
 # Make sure FindPostgreSQL.cmake is in the module path.
@@ -104,6 +102,78 @@ will be automatically generated (named `magic.control`).
 If any tests are given using `TESTS`, a test target to run the test
 will be added as well as a custom target to update the file with the
 expected output.
+
+## Having multiple extensions in the same repository
+
+If you want to keep multiple extensions in the same repository, it is
+usually easier to keep them in a separate `src` directory with one
+directory for each extension. For example, here is a repository with
+two extensions `column` and `trace` and a directory `common` with
+shared code.
+
+```
+.
+├── cmake
+│   └── FindPostgreSQL.cmake
+├── CMakeLists.txt
+├── README.md
+└── src
+    ├── CMakeLists.txt
+    ├── column
+    │   ├── colam.c
+    │   ├── colam.h
+    │   ├── colam_handler.c
+    │   └── Makefile
+    ├── common
+    │   ├── amutils.h
+    │   ├── CMakeLists.txt
+    │   ├── debug.c
+    │   └── debug.h
+    └── trace
+        ├── CMakeLists.txt
+        ├── expected
+        │   ├── create.out
+        │   ├── insert.out
+        │   └── select.out
+        ├── Makefile
+        ├── sql
+        │   ├── create.sql
+        │   ├── insert.sql
+        │   └── select.sql
+        ├── traceam--0.1.sql
+        ├── traceam.c
+        ├── traceam.h
+        └── traceam_handler.c
+
+8 directories, 28 files
+```
+
+In this case, the top-level `CMakeLists.txt` look similar, but adds
+the `src` subdirectory:
+
+```cmake
+cmake_minimum_required(VERSION 3.10)
+project(tableam)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+find_package(PostgreSQL REQUIRED)
+
+include_directories(${PostgreSQL_INCLUDE_DIRS}
+                    ${PostgreSQL_SERVER_INCLUDE_DIRS})
+
+add_subdirectory(src)
+```
+
+Inside the src directory, we then add the other extensions, but can
+also add the `src` directory as an include directory, allowing the
+different sub-packages reference each others:
+
+```cmake
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+add_subdirectory(common)
+add_subdirectory(trace)
+```
 
 ## Extensions Available in the Repository
 
