@@ -9,7 +9,7 @@ necessary.
 
 CMake has a few advantages compared to vanilla Make:
 
-1. It is well-supported by various IDEs on differen platforms.
+1. It is well-supported by various IDEs on different platforms.
 2. It supports cross-platform file manipulations.
 3. It has cross-platform support for configuration files, allowing you
    to generate files from templates.
@@ -49,7 +49,7 @@ installed in parallel, I could use `/usr/local/pgsql/11.7` like this:
 
 ```bash
 cmake -S . -B build -DPGPATH=/usr/local/pgsql/16.2
-cmake --build ..
+cmake --build build
 ```
 
 ## Creating Extensions
@@ -165,9 +165,9 @@ include_directories(${PostgreSQL_INCLUDE_DIRS}
 add_subdirectory(src)
 ```
 
-Inside the src directory, we then add the other extensions, but can
+Inside the `src` directory, you can then add the other extensions, but can
 also add the `src` directory as an include directory, allowing the
-different sub-packages reference each others:
+different sub-packages to reference each others:
 
 ```cmake
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
